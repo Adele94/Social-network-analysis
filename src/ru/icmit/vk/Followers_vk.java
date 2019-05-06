@@ -110,9 +110,25 @@ public class Followers_vk {
                 sortedGroups.size() - trimmedGroups.size()
         );
 
-        sortedGroups.forEach(group -> {
+
+        try(FileWriter writer = new FileWriter("GroupsWithSize.txt", false)){
+            sortedGroups.forEach(group -> {
+                    try {
+                        writer.write(group.toString());
+                        writer.append('\n');
+                        writer.flush();
+                    } catch (IOException e) {
+                        System.out.println(e.getMessage());
+                    }
+            });
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+/*        sortedGroups.forEach(group -> {
             System.out.println(group.toString());
-        });
+        });*/
+
 
         /* Create graph */
         GraphFactory graphFactory = new GraphFactory(trimmedGroups);
@@ -131,12 +147,27 @@ public class Followers_vk {
         );
 
         System.out.println();
-        System.out.println("Graph: ");
-        graph.forEach(edge -> {
+        try(FileWriter writer = new FileWriter("EdgesOfGraphWithAffinity.txt", false)){
+            graph.forEach(edge -> {
+                if (edge.affinity > 1e-5) {
+                    try {
+                        writer.write(edge.toString());
+                        writer.append('\n');
+                        writer.flush();
+                    } catch (IOException e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+            });
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+        //System.out.println("Graph: ");
+       /* graph.forEach(edge -> {
             if (edge.affinity > 1e-5) {
                 System.out.println(edge.toString());
             }
-        });
+        });*/
 	}
 
     private static void makeUserIdsFileFromUrls(String userUrlsFileName, String userIdsFileName) {

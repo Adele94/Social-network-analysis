@@ -65,4 +65,11 @@ public class Group {
     public String toString() {
         return String.format("Id: %d, Size: %d", id, size());
     }
+
+    public String printIdIdWithSize() {
+        return String.format("\"id\":\"%s\",\"diameter\": %d ,", id, size());
+    }
+    public String printId() {
+        return String.format("\"%s\"", id);
+    }
 }

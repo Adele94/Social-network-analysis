@@ -39,7 +39,19 @@ import java.io.*;
 import java.io.FileReader;
 
 
-public class Followers_vk {
+    class Global{
+    private static int NumberOfStudents = 1105;
+
+    public static int getNumberOfStudents(){
+        return Global.NumberOfStudents;
+    }
+
+    public static void setNumberOfStudents(int var){
+        Global.NumberOfStudents = var;
+    }
+}
+
+    public class Followers_vk {
 
     private static final VkApiClient vk = new VkApiClient(new HttpTransportClient());
     private static final UserActor ua = new UserActor(
@@ -49,8 +61,11 @@ public class Followers_vk {
 
     public static void main(String[] args) throws InterruptedException {
 
-        String studentsFileName = "kfu_students_short.txt";
+
+        String studentsFileName = "kfu_students.txt";
+        String studentsFileNameShort = "kfu_students_short.txt";
         String studentsIdsFileName = "kfu_students_vk_ids.txt";
+        String studentsIdsFileNameShort = "kfu_students_vk_ids_short.txt";
         makeUserIdsFileFromUrls(studentsFileName, studentsIdsFileName);
 
         List<String> userIds = null;
@@ -100,7 +115,7 @@ public class Followers_vk {
         /* Filter group if it has only one participant */
         List<Group> trimmedGroups = new ArrayList();
         sortedGroups.forEach(group -> {
-            if (group.size() > 1) {
+            if (group.size() > 5) {
                 trimmedGroups.add(group);
             }
         });
@@ -109,25 +124,6 @@ public class Followers_vk {
                 trimmedGroups.size(),
                 sortedGroups.size() - trimmedGroups.size()
         );
-
-
-        try(FileWriter writer = new FileWriter("GroupsWithSize.txt", false)){
-            sortedGroups.forEach(group -> {
-                    try {
-                        writer.write(group.toString());
-                        writer.append('\n');
-                        writer.flush();
-                    } catch (IOException e) {
-                        System.out.println(e.getMessage());
-                    }
-            });
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-
-/*        sortedGroups.forEach(group -> {
-            System.out.println(group.toString());
-        });*/
 
 
         /* Create graph */
@@ -146,29 +142,101 @@ public class Followers_vk {
                 (Comparator<Edge>) (edge1, edge2) -> edge1.compareByAffinityDecs(edge2)
         );
 
-        System.out.println();
-        try(FileWriter writer = new FileWriter("EdgesOfGraphWithAffinity.txt", false)){
-            graph.forEach(edge -> {
-                if (edge.affinity > 1e-5) {
+        createJSON(trimmedGroups,graph);
+	}
+
+	/* Write graph to JSON file */
+	private static void createJSON(List<Group> sortedGroups,List<Edge> graph){
+        try(FileWriter writer = new FileWriter("blocks.json", false)){
+            writer.write("{\"nodes\":[");
+            int i = 0;
+            int min = 1;
+            int max = 5; // здесь примерное количество будущих кластеров.
+                         // у каждого кластера будет свой номер
+
+            int  LowerAffinityBoundary = 5;
+
+            for ( i = 0; i < sortedGroups.size()-1; i++) {
+
+                Global.getNumberOfStudents();
+
+                //set Lower affinity boundary for each node
+                if (sortedGroups.get(i).size()> Global.getNumberOfStudents()/3)
+                    LowerAffinityBoundary= 5;
+                else {
+                    if (sortedGroups.get(i).size() > Global.getNumberOfStudents() / 5)
+                         LowerAffinityBoundary = 10;
+                    else {
+                        if(sortedGroups.get(i).size() > Global.getNumberOfStudents() / 8)
+                             LowerAffinityBoundary = 15;
+                        else {
+                            if(sortedGroups.get(i).size() > Global.getNumberOfStudents() / 11)
+                                 LowerAffinityBoundary = 20;
+                            else {
+                                if(sortedGroups.get(i).size() > Global.getNumberOfStudents() / 22)
+                                     LowerAffinityBoundary = 25;
+                                else  LowerAffinityBoundary = 30;
+                            }
+                        }
+                    }
+                }
+
+                //write nodes
+                try {
+                    writer.write("{");
+                    writer.write(sortedGroups.get(i).printIdIdWithSize());
+                    writer.write("\"cluster\":");
+                    int diff = max - min;
+                    int rnd = min + (int) (Math.random() * max);
+                    writer.write(String.valueOf(rnd));
+                    writer.write("},");
+                    writer.flush();
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
+                }
+            };
+
+            // Для последней ноды записываем в файл без запятой
+            writer.write("{");
+            writer.write(sortedGroups.get(i).printIdIdWithSize());
+            writer.write("\"cluster\":");
+            int diff = max - min;
+            int rnd = min + (int) (Math.random() * max);
+            writer.write(String.valueOf(rnd));
+            writer.write("}");
+            writer.flush();
+            writer.write("],");
+
+            //write edges
+            writer.write("\"links\":[");
+            i = 0;
+            for ( ; i < graph.size()-1; i++) {
+                if (graph.get(i).affinity >  LowerAffinityBoundary) {
                     try {
-                        writer.write(edge.toString());
-                        writer.append('\n');
+                        writer.write("{");
+                        writer.write(graph.get(i).printEdges());
+                        writer.write(",");
                         writer.flush();
                     } catch (IOException e) {
                         System.out.println(e.getMessage());
                     }
                 }
-            });
+            };
+
+            // Для последней связи выводим в файл без запятой и с любым  LowerAffinityBoundary
+            try {
+                writer.write("{");
+                writer.write(graph.get(i).printEdges());
+                writer.flush();
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+            writer.write("]}");
+            writer.append('\n');
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-        //System.out.println("Graph: ");
-       /* graph.forEach(edge -> {
-            if (edge.affinity > 1e-5) {
-                System.out.println(edge.toString());
-            }
-        });*/
-	}
+    }
 
     private static void makeUserIdsFileFromUrls(String userUrlsFileName, String userIdsFileName) {
         makeUserIdsFileFromUrls(userUrlsFileName, userIdsFileName, "create");
@@ -191,6 +259,7 @@ public class Followers_vk {
         String strLine;
 
         List<String> userIds = new LinkedList<>();
+        int count = 0;
         try {
             while ((strLine = br.readLine()) != null) {
                 URL url = new URL(strLine);
@@ -198,6 +267,7 @@ public class Followers_vk {
 
                 try {
                     userIds.add(vk.utils().resolveScreenName(ua, screenName).execute().getObjectId().toString());
+                    count++;
                 } catch (ClientException e) {
                     System.err.format("Vk user with following group does not exist: $s %n", screenName);
                 } catch (ApiException e) {
@@ -206,6 +276,7 @@ public class Followers_vk {
 
                 Thread.sleep(1000);
             }
+            Global.setNumberOfStudents(count);
         } catch (IOException e) {
             System.err.format("Can't read file: %s %n", userUrlsFileName);
         } catch (InterruptedException e) {

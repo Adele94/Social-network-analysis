@@ -29,4 +29,8 @@ public class Edge {
     public String toString() {
         return String.format("%d - %d: %f", groupIdA, groupIdB, affinity);
     }
+
+    public String printEdges() {
+        return String.format("\"source\":\"%s\",\"target\":\"%s\"}", groupIdA, groupIdB);
+    }
 }

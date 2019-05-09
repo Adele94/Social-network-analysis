@@ -142,11 +142,60 @@ import java.io.FileReader;
                 (Comparator<Edge>) (edge1, edge2) -> edge1.compareByAffinityDecs(edge2)
         );
 
+        createWeightedGraphTxt(graph);
         createJSON(trimmedGroups,graph);
-	}
+    }
+
+    /* Create graph to TXT file */
+	private static void createWeightedGraphTxt(List<Edge> graph) {
+
+        try (FileWriter writer = new FileWriter("WeightedGraph.txt", false)) {
+
+            graph.forEach(edges -> {
+                try {
+                    if(edges.affinity > 0) {
+                        writer.write(String.valueOf(edges.groupIdA) + ' ' + String.valueOf(edges.groupIdB) + ' ' + String.valueOf(edges.affinity));
+                        writer.append('\n');
+                        writer.flush();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 	/* Write graph to JSON file */
 	private static void createJSON(List<Group> sortedGroups,List<Edge> graph){
+
+	    Map<Integer,Integer> clustering = new HashMap<>();
+
+        List<String> lines = new ArrayList<String>();
+        try{
+            BufferedReader reader = new BufferedReader(new FileReader("clustering_graph.txt"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lines.add(line);
+            }
+
+        }catch (IOException e){
+            System.out.println("Ошибка");
+        }
+        //если нужен массив то список можно запросто преобразовать
+        String [] linesAsArray= lines.toArray(new String[lines.size()]);
+
+        for (int i=0;i< linesAsArray.length; i++)
+        {
+            String[] ary = linesAsArray[i].split(" ");
+            for(int j = 0;j < ary.length; j++)
+            {
+                clustering.put(Integer.valueOf(ary[j]),i+1);
+            }
+        }
+
         try(FileWriter writer = new FileWriter("blocks.json", false)){
             writer.write("{\"nodes\":[");
             int i = 0;
@@ -186,9 +235,19 @@ import java.io.FileReader;
                     writer.write("{");
                     writer.write(sortedGroups.get(i).printIdIdWithSize());
                     writer.write("\"cluster\":");
-                    int diff = max - min;
-                    int rnd = min + (int) (Math.random() * max);
-                    writer.write(String.valueOf(rnd));
+                   /* int diff = max - min;
+                    int rnd = min + (int) (Math.random() * max);*/
+                    int cluster = sortedGroups.get(i).hashCode();
+
+                    try {
+                        cluster = clustering.get(cluster);
+                    }
+                    catch(Exception ex){
+
+                        System.out.println(ex.getMessage());
+                        cluster = 0;
+                    }
+                    writer.write(String.valueOf(cluster));
                     writer.write("},");
                     writer.flush();
                 } catch (IOException e) {
@@ -200,9 +259,10 @@ import java.io.FileReader;
             writer.write("{");
             writer.write(sortedGroups.get(i).printIdIdWithSize());
             writer.write("\"cluster\":");
-            int diff = max - min;
-            int rnd = min + (int) (Math.random() * max);
-            writer.write(String.valueOf(rnd));
+        /*    int diff = max - min;
+            int rnd = min + (int) (Math.random() * max);*/
+            int cluster = clustering.get(sortedGroups.get(i).hashCode());
+            writer.write(String.valueOf(cluster));
             writer.write("}");
             writer.flush();
             writer.write("],");
